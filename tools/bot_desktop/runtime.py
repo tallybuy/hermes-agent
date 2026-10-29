@@ -490,8 +490,8 @@ def _idle_due(launcher: Optional[tuple[int, float]]) -> Optional[float]:
 def stop_if_idle(launcher: Optional[tuple[int, float]] = None) -> bool:
     """Stop this profile's screen when it has been idle past the limit and no human holds it (a human lease
     with no use for ``HUMAN_LEASE_ABANDONED_WINDOWS`` windows, and at least ``HUMAN_LEASE_ABANDONED_MIN_S``,
-    counts as abandoned). True when
-    it was stopped. ``launcher`` names the screen the caller judges (the launcher's own check passes it).
+    counts as abandoned). True when it was stopped. ``launcher`` names the screen the caller judges (the
+    launcher's own check passes it).
 
     The decision is taken again under ``start.lock`` before anything is killed: a check that waited on the
     lock while the screen was stopped and started again (or used) must not kill the screen it finds then."""
@@ -788,7 +788,7 @@ def _spawn_and_wait(sd: Path, wait_seconds: float) -> DesktopStatus:
             # command (the ``hermes --run-module`` launcher on a store install, which follows Python pin changes
             # and picks the current dependency generation at every run; this interpreter elsewhere), in this
             # home, first once the screen could be due (nothing is idle at start). The screen outlives updates,
-            # so neither this interpreter nor the inherited PYTHONPATH generation may be pinned.
+            # so on a store install neither this interpreter nor the inherited PYTHONPATH generation is pinned.
             "HERMES_BD_IDLE_CMD": shlex.join(installation_command(
                 Path(__file__).resolve().parents[2], module="tools.bot_desktop.idle_watch")),
             "HERMES_BD_HOME": str(get_hermes_home()),
@@ -873,7 +873,8 @@ def _sandbox_published_env() -> dict[str, str]:
 
 def stop(still_due: Optional[Callable[[], bool]] = None) -> bool:
     """Stop this profile's desktop; True when a running launcher (or the X server a dead one left behind)
-    was signalled. ``still_due`` is re-asked under ``start.lock``; False there leaves the screen running."""
+    was signalled. ``still_due`` is asked again before anything is killed (under ``start.lock`` for a screen on
+    this host); False there leaves the screen running."""
     from tools.bot_desktop import sandbox_host
     if sandbox_host._read_marker() or placement.resolve().where == placement.TERMINAL:
         if still_due is not None and not still_due():
