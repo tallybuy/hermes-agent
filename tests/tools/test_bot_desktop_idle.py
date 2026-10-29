@@ -88,6 +88,16 @@ def test_idle_stop_disabled_by_zero(tmp_path, monkeypatch):
     assert runtime.stop_if_idle() is False and stops == []
 
 
+def test_an_infinite_idle_window_is_off_and_never_overflows_the_next_check(monkeypatch):
+    """``idle_stop_minutes: .inf`` meant "never stop" before the self-stop; the launcher's first-check delay
+    is computed from it in start(), where an infinite window raised OverflowError."""
+    from hermes_cli import config
+    from tools.bot_desktop.idle_watch import next_check_in
+    monkeypatch.setattr(config, "load_config_readonly", lambda: {"bot_desktop": {"idle_stop_minutes": float("inf")}})
+    assert runtime.idle_stop_seconds() == 0.0
+    assert next_check_in(runtime.idle_stop_seconds(), 0.0) == runtime.DEFAULT_IDLE_STOP_MINUTES * 60
+
+
 def test_the_launchers_idle_check_sleeps_until_the_screen_could_be_due():
     from tools.bot_desktop.idle_watch import next_check_in
     assert next_check_in(1800, 600) == 1200  # wakes when the window runs out at the current age

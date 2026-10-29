@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import math
 import os
 import shlex
 import shutil
@@ -461,7 +462,9 @@ def idle_stop_seconds() -> float:
         minutes = float(cfg.get("idle_stop_minutes", DEFAULT_IDLE_STOP_MINUTES))
     except (TypeError, ValueError):
         minutes = DEFAULT_IDLE_STOP_MINUTES
-    return max(0.0, minutes) * 60
+    # .inf ("never") is off, like 0: an infinite window can never be due, and the launcher's next-check
+    # arithmetic would overflow on it and fail start().
+    return minutes * 60 if math.isfinite(minutes) and minutes > 0 else 0.0
 
 
 def _idle_due(launcher: Optional[tuple[int, float]]) -> Optional[float]:
