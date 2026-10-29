@@ -65,6 +65,24 @@ def test_a_human_lease_keeps_the_screen_until_nothing_has_used_it_for_four_windo
     assert runtime.stop_if_idle() is True and stops == [True], "abandoned: no use for four windows"
 
 
+def test_an_abandoned_human_lease_is_released_with_the_screen_it_stopped(tmp_path, monkeypatch):
+    """The lapse stops the screen, but a lease that still names the human fences the agent out of the next
+    one ("a human has control"), so the next use never brings the screen back."""
+    sd, stops = _running(monkeypatch, tmp_path)
+    released = []
+    monkeypatch.setattr(lease, "release", lambda viewer_id=None, **_: released.append(viewer_id))
+    (sd / "activity").touch()
+    _age(sd / "activity", 600 * runtime.HUMAN_LEASE_ABANDONED_WINDOWS + 60)
+
+    monkeypatch.setattr(lease, "get", lambda profile_key=None: lease.Lease(holder=lease.AGENT))
+    assert runtime.stop_if_idle() is True and stops == [True]
+    assert released == [], "an agent-held screen has no lease to hand back"
+
+    monkeypatch.setattr(lease, "get", lambda profile_key=None: lease.Lease(holder=lease.HUMAN, viewer_id="v1"))
+    assert runtime.stop_if_idle() is True and stops == [True, True]
+    assert released == ["v1"], "only the abandoned viewer's lease is released"
+
+
 def test_a_short_window_never_times_out_a_human_between_two_viewer_stamps(tmp_path, monkeypatch):
     """An attached viewer stamps activity at most once a minute (and the panel clock repaints once a
     minute), so stamps can be about two minutes apart. With idle_stop_minutes: 0.1 four windows are

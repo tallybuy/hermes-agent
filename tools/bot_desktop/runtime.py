@@ -498,8 +498,16 @@ def stop_if_idle(launcher: Optional[tuple[int, float]] = None) -> bool:
     idle = _idle_due(launcher)
     if idle is None:
         return False
+    from tools.bot_desktop import lease as _bd_lease
+    held = _bd_lease.get()
     logger.info("Bot Desktop for profile %s idle for %.0f min; stopping", _profile_name(), idle / 60)
-    return stop(still_due=lambda: _idle_due(launcher) is not None)
+    if not stop(still_due=lambda: _idle_due(launcher) is not None):
+        return False
+    if held.holder == _bd_lease.HUMAN:
+        # An abandoned human lease stopped the screen. Left in place it would fence the agent out of the next
+        # screen ("a human has control"); only that viewer's lease goes, so a new takeover is kept.
+        _bd_lease.release(held.viewer_id)
+    return True
 
 
 def published_env() -> dict[str, str]:
